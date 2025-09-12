@@ -36,6 +36,8 @@ function SearchPageClient() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [failedSources, setFailedSources] = useState<{ name: string; key: string; error: string }[]>([]);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<string | null>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
 
   // 筛选状态 - 从 URL 参数初始化，如果没有URL参数则从保存的源读取
   const [searchSources, setSearchSources] = useState<string[]>(() => {
@@ -317,6 +319,17 @@ function SearchPageClient() {
     };
   }, []);
 
+  // 点击空白处取消高亮
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
+        setSelectedHistoryItem(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   // URL 搜索变化
   useEffect(() => {
     const query = searchParams.get('q');
@@ -531,14 +544,14 @@ function SearchPageClient() {
           
           {/* 全局清空筛选按钮 - 只清空标题、年份和来源筛选，不包含搜索源 */}
           {(filterSources.length > 0 || selectedTitles.length > 0 || selectedYears.length > 0) && (
-            <div className="flex items-center bg-white/10 dark:bg-gray-800/50 backdrop-blur-md rounded-xl overflow-hidden border border-white/20 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mr-2 mb-2">
               <button
                 onClick={() => {
                   setFilterSources([]);
                   setSelectedTitles([]);
                   setSelectedYears([]);
                 }}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-white/20 dark:hover:bg-gray-700/30 transition-all duration-300"
+                className="flex items-center gap-1 px-3 py-2 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 title="清空所有筛选条件"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -704,50 +717,76 @@ function SearchPageClient() {
 
           ) : searchHistory.length > 0 ? (
             <section className="mb-12">
-              <h2 className="mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200">
-                搜索历史
-                {searchHistory.length > 0 && (
-                  <button
-                    onClick={() => clearSearchHistory()}
-                    className="ml-3 text-sm text-gray-500 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:text-red-500"
-                  >
-                    清空
-                  </button>
-                )}
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {searchHistory.map((item, index) => (
-                  <div key={`history-${item}-${index}`} className="relative group">
-                    <button
-                      onClick={() => {
-                        setSearchQuery(item);
-                        // 构建包含超时参数的URL
-                        const urlParams = new URLSearchParams();
-                        urlParams.set('q', item.trim());
-                        // 添加超时时间参数
-                        const timeoutSeconds = getRequestTimeout();
-                        urlParams.set('timeout', timeoutSeconds.toString());
-                        router.push(`/search?${urlParams.toString()}`);
-                      }}
-                      className="px-4 py-2 bg-gray-500/10 hover:bg-gray-300 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300"
-                    >
-                      {item}
-                    </button>
-                    <button
-                      aria-label="删除搜索历史"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        deleteSearchHistory(item);
-                      }}
-                      className="absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <h2 className="mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200">
+              搜索历史
+              {searchHistory.length > 0 && (
+                <button
+                  onClick={() => clearSearchHistory()}
+                  className="ml-3 text-sm text-gray-500 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:text-red-500"
+                >
+                  清空
+                </button>
+              )}
+            </h2>
+            <div ref={historyRef} className="flex flex-wrap gap-2">
+  {searchHistory.map((item, index) => (
+    <div key={`history-${item}-${index}`} className="relative group">
+      <button
+        onClick={() => {
+          if (selectedHistoryItem === item) {
+            // 第二次点击触发搜索
+            const urlParams = new URLSearchParams();
+            urlParams.set('q', item.trim());
+            const timeoutSeconds = getRequestTimeout();
+            urlParams.set('timeout', timeoutSeconds.toString());
+            router.push(`/search?${urlParams.toString()}`);
+          } else {
+            // 第一次点击，选中历史项
+            setSearchQuery(item);
+            setSelectedHistoryItem(item);
+          }
+        }}
+        className={`px-4 py-2 rounded-full text-sm transition-colors duration-200 ${
+          selectedHistoryItem === item
+            ? 'bg-green-500/20 text-green-600 dark:bg-green-600/30 dark:text-green-300'
+            : 'bg-gray-500/10 hover:bg-gray-300 text-gray-700 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300'
+        }`}
+      >
+        {item}
+      </button>
+
+      {/* 删除按钮 */}
+      {(selectedHistoryItem === item) ? (
+        <button
+          aria-label="删除搜索历史"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            deleteSearchHistory(item);
+            if (selectedHistoryItem === item) setSelectedHistoryItem(null);
+          }}
+          className="absolute -top-1 -right-1 w-4 h-4 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      ) : (
+        <button
+          aria-label="删除搜索历史"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            deleteSearchHistory(item);
+          }}
+          className="absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  ))}
+</div>
+
+          </section>
           ) : null}
         </div>
       </div>
