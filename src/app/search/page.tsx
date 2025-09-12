@@ -517,15 +517,15 @@ function SearchPageClient() {
             openFilter={openFilter}
             setOpenFilter={setOpenFilter}
             // 排序相关属性
-            sortField={viewMode ? sortField : undefined}
-            onSortFieldChange={viewMode ? handleSortFieldChange : undefined}
-            sortOrder={viewMode ? sortOrder : undefined}
-            onSortOrderChange={viewMode ? setSortOrder : undefined}
-            sortOptions={viewMode ? [
-            { value: 'sources', label: '按源数量' },
-            { value: 'year', label: '按年份' },
-            { value: 'episodes', label: '按集数' }
-            ] : undefined}
+            sortField={sortField}
+            onSortFieldChange={handleSortFieldChange}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+            sortOptions={[
+              { value: 'sources', label: '按源数量' },
+              { value: 'year', label: '按年份' },
+              { value: 'episodes', label: '按集数' }
+            ]}
           />
 
           
@@ -608,32 +608,94 @@ function SearchPageClient() {
                       />
                     </div>
                   ))
-                : searchResults
-                    .filter((item) => {
+                : (() => {
+                    const filteredResults = searchResults.filter((item) => {
                       // 来源筛选：如果没有选择任何来源（filterSources.length === 0），默认显示全部；如果选择了来源，只保留包含至少一个选中来源的影片
                       const sourceMatch = filterSources.length === 0 ||
                         filterSources.includes(item.source_name);
                       const titleMatch = selectedTitles.length === 0 || selectedTitles.includes(item.title);
                       const yearMatch = selectedYears.length === 0 || selectedYears.includes(item.year);
                       return sourceMatch && titleMatch && yearMatch;
-                    })
-                    .map((item, index) => (
-                      <div key={`all-${item.source}-${item.id}-${index}`} className="w-full">
-                        <VideoCard
-                          id={item.id}
-                          title={item.title}
-                          poster={item.poster}
-                          episodes={item.episodes.length}
-                          source={item.source}
-                          source_name={item.source_name}
-                          douban_id={item.douban_id}
-                          query={searchQuery.trim() !== item.title ? searchQuery.trim() : ''}
-                          year={item.year}
-                          from="search"
-                          type={item.episodes.length > 1 ? 'tv' : 'movie'}
-                        />
-                      </div>
-                    ))}
+                    });
+
+                    // 对非聚合结果进行排序
+                    return filteredResults
+                      .sort((a, b) => {
+                        const query = searchQuery.trim().toLowerCase();
+                        const aExactMatch = a.title.toLowerCase().includes(query);
+                        const bExactMatch = b.title.toLowerCase().includes(query);
+                        
+                        // 精确匹配的优先
+                        if (aExactMatch && !bExactMatch) return -1;
+                        if (!aExactMatch && bExactMatch) return 1;
+
+                        let aVal: number | string | null = null;
+                        let bVal: number | string | null = null;
+
+                        switch (sortField) {
+                          case 'sources':
+                            // 在非聚合模式下，源数量总是1，所以按源名称排序
+                            aVal = a.source_name;
+                            bVal = b.source_name;
+                            break;
+                          case 'episodes':
+                            aVal = a.episodes.length;
+                            bVal = b.episodes.length;
+                            break;
+                          case 'year':
+                          default:
+                            {
+                              const aYear = a.year;
+                              const bYear = b.year;
+                              if (aYear && aYear !== 'unknown') {
+                                const aNum = Number(aYear);
+                                aVal = Number.isNaN(aNum) ? aYear : aNum;
+                              }
+                              if (bYear && bYear !== 'unknown') {
+                                const bNum = Number(bYear);
+                                bVal = Number.isNaN(bNum) ? bYear : bNum;
+                              }
+                            }
+                            break;
+                        }
+
+                        const aIsNull = aVal === null || aVal === undefined;
+                        const bIsNull = bVal === null || bVal === undefined;
+                        if (aIsNull && !bIsNull) return 1;
+                        if (!aIsNull && bIsNull) return -1;
+                        if (aIsNull && bIsNull) return 0;
+
+                        if (typeof aVal === 'number' && typeof bVal === 'number') {
+                          if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+                          if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+                        } else {
+                          // 字符串比较
+                          const aStr = String(aVal);
+                          const bStr = String(bVal);
+                          if (aStr < bStr) return sortOrder === 'asc' ? -1 : 1;
+                          if (aStr > bStr) return sortOrder === 'asc' ? 1 : -1;
+                        }
+
+                        return a.title.localeCompare(b.title);
+                      })
+                      .map((item, index) => (
+                        <div key={`all-${item.source}-${item.id}-${index}`} className="w-full">
+                          <VideoCard
+                            id={item.id}
+                            title={item.title}
+                            poster={item.poster}
+                            episodes={item.episodes.length}
+                            source={item.source}
+                            source_name={item.source_name}
+                            douban_id={item.douban_id}
+                            query={searchQuery.trim() !== item.title ? searchQuery.trim() : ''}
+                            year={item.year}
+                            from="search"
+                            type={item.episodes.length > 1 ? 'tv' : 'movie'}
+                          />
+                        </div>
+                      ));
+                  })()}
               {searchResults.length === 0 && (
                 <div className="col-span-full text-center text-gray-500 py-8 dark:text-gray-400">未找到相关结果</div>
               )}
