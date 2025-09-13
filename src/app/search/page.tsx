@@ -303,9 +303,21 @@ function SearchPageClient() {
     }
   };
 
-  // 搜索历史、滚动监听
+  // 搜索历史、滚动监听和自动搜索处理
   useEffect(() => {
-    !searchParams.get('q') && document.getElementById('searchInput')?.focus();
+    // 检查URL中是否有搜索查询参数
+    const urlQuery = searchParams.get('q');
+    if (urlQuery) {
+      // 触发搜索
+      setSearchQuery(urlQuery);
+      setIsLoading(true);
+      setShowResults(true);
+      fetchSearchResults(urlQuery);
+      addSearchHistory(urlQuery);
+    } else {
+      document.getElementById('searchInput')?.focus();
+    }
+    
     getSearchHistory().then(setSearchHistory);
     const unsubscribe = subscribeToDataUpdates('searchHistoryUpdated', setSearchHistory);
     const handleScroll = () => {
