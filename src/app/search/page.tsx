@@ -330,21 +330,6 @@ function SearchPageClient() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // URL 搜索变化
-  useEffect(() => {
-    const query = searchParams.get('q');
-    if (query) {
-      setSearchQuery(query);
-      
-      fetchSearchResults(query);
-      setShowSuggestions(false);
-      addSearchHistory(query);
-    } else {
-      setShowResults(false);
-      setShowSuggestions(false);
-    }
-  }, [searchParams]);
-
   // 更新筛选状态到 URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
