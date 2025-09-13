@@ -321,7 +321,7 @@ export class D1Storage implements IStorage {
         favorite.cover,
         favorite.total_episodes,
         favorite.save_time,
-        favorite.search_title || undefined
+        favorite.search_title
       )
       .run();
   }

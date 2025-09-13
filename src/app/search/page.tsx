@@ -386,10 +386,11 @@ function SearchPageClient() {
     if (searchQuery.trim()) setShowSuggestions(true);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = searchQuery.trim().replace(/\s+/g, ' ');
+  const handleSearch = (e?: React.FormEvent, query?: string) => {
+    if (e) e.preventDefault(); // 如果是表单触发，阻止默认行为
+    const trimmed = (query ?? searchQuery).trim().replace(/\s+/g, ' ');
     if (!trimmed) return;
+  
     setSearchQuery(trimmed);
     setIsLoading(true);
     setShowResults(true);
@@ -720,11 +721,7 @@ function SearchPageClient() {
         onClick={() => {
           if (selectedHistoryItem === item) {
             // 第二次点击触发搜索
-            const urlParams = new URLSearchParams();
-            urlParams.set('q', item.trim());
-            const timeoutSeconds = getRequestTimeout();
-            urlParams.set('timeout', timeoutSeconds.toString());
-            router.push(`/search?${urlParams.toString()}`);
+            handleSearch(undefined, item);
           } else {
             // 第一次点击，选中历史项
             setSearchQuery(item);
