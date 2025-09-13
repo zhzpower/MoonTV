@@ -38,6 +38,7 @@ function SearchPageClient() {
   const [failedSources, setFailedSources] = useState<{ name: string; key: string; error: string }[]>([]);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<string | null>(null);
   const historyRef = useRef<HTMLDivElement>(null);
+  const [hasResetOnEmptyParams, setHasResetOnEmptyParams] = useState(true);
 
   // 筛选状态 - 从 URL 参数初始化，如果没有URL参数则从保存的源读取
   const [searchSources, setSearchSources] = useState<string[]>(() => {
@@ -330,6 +331,20 @@ function SearchPageClient() {
       document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // 监听URL参数变化，当URL变为无参数时重新挂载组件（只执行一次）
+  useEffect(() => {
+    const urlQuery = searchParams.get('q');
+    // 如果之前有搜索参数但现在没有了，说明URL变成了无参数状态，且尚未执行过重置
+    if (!urlQuery && !hasResetOnEmptyParams) {
+      // 重置状态，模拟组件重新挂载
+      setShowResults(false);
+      setHasResetOnEmptyParams(true);
+    } else if (urlQuery) {
+      // 当有搜索参数时，重置标志位，以便下次可以再次触发
+      setHasResetOnEmptyParams(false);
+    }
+  }, [searchParams, hasResetOnEmptyParams]);
 
   // 点击空白处取消高亮
   useEffect(() => {
