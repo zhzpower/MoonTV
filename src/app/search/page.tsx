@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any */
 'use client';
 
-import { ChevronUp, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronUp, Search, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo } from 'react';
 import { useEffect,useRef, useState } from 'react';
@@ -323,7 +323,6 @@ function SearchPageClient() {
     const unsubscribe = subscribeToDataUpdates('searchHistoryUpdated', setSearchHistory);
     const handleScroll = () => {
       setShowBackToTop((document.body.scrollTop || 0) > 300);
-      setOpenFilter(null);
     };
     document.body.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
@@ -477,7 +476,7 @@ function SearchPageClient() {
     <PageLayout activePath="/search">
       <div className="px-4 sm:px-10 py-4 sm:py-8 overflow-visible mb-10">
         {/* 搜索框和搜索源选择器 - 作为一个整体 */}
-        <div className="mb-4 max-w-2xl mx-auto">
+        <div className="mb-7 max-w-2xl mx-auto">
           <div className="flex items-center">
             {/* 搜索源选择器 - 在搜索框左侧，作为一个整体 */}
             <div className="flex-shrink-0">
@@ -507,73 +506,7 @@ function SearchPageClient() {
           </div>
         </div>
 
-        {/* 筛选组件弹窗 */}
-        {showResults && searchResults.length > 0 && (
-          <div className="flex gap-3 flex-wrap mb-4 max-w-[95%] mx-auto">
-          <FilterOptions
-            title="来源"
-            options={sourceOptions}
-            selectedOptions={filterSources}
-            onChange={setFilterSources}
-            openFilter={openFilter}
-            setOpenFilter={setOpenFilter}
-          />
-          <FilterOptions
-            title="标题"
-            options={titleOptions}
-            selectedOptions={selectedTitles}
-            onChange={setSelectedTitles}
-            openFilter={openFilter}
-            setOpenFilter={setOpenFilter}
-          />
-          <FilterOptions
-            title="年份"
-            options={yearOptions}
-            selectedOptions={selectedYears}
-            onChange={setSelectedYears}
-            openFilter={openFilter}
-            setOpenFilter={setOpenFilter}
-          />
 
-          <FilterOptions
-            title="排序"
-            options={[]}
-            selectedOptions={[]}
-            onChange={() => {/* no-op for sort filter */}}
-            openFilter={openFilter}
-            setOpenFilter={setOpenFilter}
-            // 排序相关属性
-            sortField={sortField}
-            onSortFieldChange={handleSortFieldChange}
-            sortOrder={sortOrder}
-            onSortOrderChange={setSortOrder}
-            sortOptions={[
-              { value: 'sources', label: '按源数量' },
-              { value: 'year', label: '按年份' },
-              { value: 'episodes', label: '按集数' }
-            ]}
-          />
-
-          
-          {/* 全局清空筛选按钮 - 只清空标题、年份和来源筛选，不包含搜索源 */}
-          {(filterSources.length > 0 || selectedTitles.length > 0 || selectedYears.length > 0) && (
-            <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mr-2 mb-2">
-              <button
-                onClick={() => {
-                  setFilterSources([]);
-                  setSelectedTitles([]);
-                  setSelectedYears([]);
-                }}
-                className="flex items-center gap-1 px-3 py-2 text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                title="清空所有筛选条件"
-              >
-                <RotateCcw className="w-4 h-4" />
-                清空筛选
-              </button>
-            </div>
-          )}
-          </div>
-        )}
 
 
         {/* 搜索结果 */}
@@ -584,7 +517,7 @@ function SearchPageClient() {
             </div>
           ) : showResults ? (
           <section className="mb-12">
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">搜索结果</h2>
                 <FailedSourcesDisplay failedSources={failedSources} />
@@ -619,6 +552,38 @@ function SearchPageClient() {
                 </label>
               </div>
             </div>
+
+        {/* 筛选组件弹窗 */}
+        {showResults && searchResults.length > 0 && (
+          <div className="flex gap-3 flex-wrap mb-7 max-w-[100%] mx-auto">
+            <FilterOptions
+              openFilter={openFilter}
+              setOpenFilter={setOpenFilter}
+              // 来源
+              sourceOptions={sourceOptions}
+              filterSources={filterSources}
+              setFilterSources={setFilterSources}
+              // 标题
+              titleOptions={titleOptions}
+              selectedTitles={selectedTitles}
+              setSelectedTitles={setSelectedTitles}
+              // 年份
+              yearOptions={yearOptions}
+              selectedYears={selectedYears}
+              setSelectedYears={setSelectedYears}
+              // 排序
+              sortField={sortField}
+              onSortFieldChange={handleSortFieldChange}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+              sortOptions={[
+                { value: "sources", label: "按源数量" },
+                { value: "year", label: "按年份" },
+                { value: "episodes", label: "按集数" },
+              ]}
+            />
+          </div>
+        )}
 
             <div
               key={`search-results-${viewMode}`}
@@ -742,59 +707,58 @@ function SearchPageClient() {
               )}
             </h2>
             <div ref={historyRef} className="flex flex-wrap gap-2">
-  {searchHistory.map((item, index) => (
-    <div key={`history-${item}-${index}`} className="relative group">
-      <button
-        onClick={() => {
-          if (selectedHistoryItem === item) {
-            // 第二次点击触发搜索
-            handleSearch(undefined, item);
-          } else {
-            // 第一次点击，选中历史项
-            setSearchQuery(item);
-            setSelectedHistoryItem(item);
-          }
-        }}
-        className={`px-4 py-2 rounded-full text-sm transition-colors duration-200 ${
-          selectedHistoryItem === item
-            ? 'bg-green-500/20 text-green-600 dark:bg-green-600/30 dark:text-green-300'
-            : 'bg-gray-500/10 hover:bg-gray-300 text-gray-700 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300'
-        }`}
-      >
-        {item}
-      </button>
+            {searchHistory.map((item, index) => (
+              <div key={`history-${item}-${index}`} className="relative group">
+                <button
+                  onClick={() => {
+                    if (selectedHistoryItem === item) {
+                      // 第二次点击触发搜索
+                      handleSearch(undefined, item);
+                    } else {
+                      // 第一次点击，选中历史项
+                      setSearchQuery(item);
+                      setSelectedHistoryItem(item);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-full text-sm transition-colors duration-200 ${
+                    selectedHistoryItem === item
+                      ? 'bg-green-500/20 text-green-600 dark:bg-green-600/30 dark:text-green-300'
+                      : 'bg-gray-500/10 hover:bg-gray-300 text-gray-700 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  {item}
+                </button>
 
-      {/* 删除按钮 */}
-      {(selectedHistoryItem === item) ? (
-        <button
-          aria-label="删除搜索历史"
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            deleteSearchHistory(item);
-            if (selectedHistoryItem === item) setSelectedHistoryItem(null);
-          }}
-          className="absolute -top-1 -right-1 w-4 h-4 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      ) : (
-        <button
-          aria-label="删除搜索历史"
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            deleteSearchHistory(item);
-          }}
-          className="absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      )}
-    </div>
-  ))}
-</div>
-
+                {/* 删除按钮 */}
+                {(selectedHistoryItem === item) ? (
+                  <button
+                    aria-label="删除搜索历史"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      deleteSearchHistory(item);
+                      if (selectedHistoryItem === item) setSelectedHistoryItem(null);
+                    }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <button
+                    aria-label="删除搜索历史"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      deleteSearchHistory(item);
+                    }}
+                    className="absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
           </section>
           ) : null}
         </div>
