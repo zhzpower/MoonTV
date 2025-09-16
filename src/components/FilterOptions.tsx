@@ -180,13 +180,6 @@ const FilterOptions: React.FC<FilterOptionsProps> = ({
           {opt.label}
         </button>
       ))}
-      <button
-        onClick={() => onSortOrderChange(sortOrder === "asc" ? "desc" : "asc")}
-        className="px-3 py-2 text-sm flex items-center gap-1 border rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
-      >
-        <ArrowUpDown className="w-4 h-4" />
-        {sortOrder === "asc" ? "升序" : "降序"}
-      </button>
     </div>
   );
 
@@ -218,19 +211,35 @@ const FilterOptions: React.FC<FilterOptionsProps> = ({
         </div>
         <div className="flex items-center gap-2">
           {activeTab === "筛选" && (
+            <>
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+              >
+                清空筛选
+              </button>
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                {collapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </>
+          )}
+
+          {activeTab === "排序" && (
             <button
-              onClick={clearAllFilters}
-              className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+              onClick={() => onSortOrderChange(sortOrder === "asc" ? "desc" : "asc")}
+              className="px-3 py-2 text-sm flex items-center gap-1 border rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
             >
-              清空筛选
+              <ArrowUpDown className="w-4 h-4" />
+              {sortOrder === "asc" ? "升序" : "降序"}
             </button>
           )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-          </button>
         </div>
       </div>
 
