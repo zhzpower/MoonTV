@@ -157,63 +157,72 @@ function SearchPageClient() {
       .filter(([_, group]) => group.length > 0);
   }, [aggregatedResults, filterSources, selectedTitles, selectedYears]);
 
-  // 对聚合结果进行排序（支持：源数量、年份、集数；升序/降序）。保留“标题包含关键字”的结果优先。
-  const sortedAggregatedResults: [string, SearchResult[]][] = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const isExact = (group: SearchResult[]) => group[0].title.toLowerCase().includes(query);
-    const getYearValue = (group: SearchResult[]) => {
-      const y = group[0].year;
-      if (!y || y === 'unknown') return null;
-      const n = Number(y);
-      return Number.isNaN(n) ? null : n;
-    };
-    const getSourcesCount = (group: SearchResult[]) => group.length;
-    const getEpisodesCount = (group: SearchResult[]) => {
-      let maxEpisodes = 0;
-      for (const item of group) {
-        const count = Array.isArray(item.episodes) ? item.episodes.length : 0;
-        if (count > maxEpisodes) maxEpisodes = count;
-      }
-      return maxEpisodes;
-    };
+// 返回两个数组：exact 和 others
+const sortedAggregatedResults: { exact: [string, SearchResult[]][], others: [string, SearchResult[]][] } = useMemo(() => {
+  const aggregateMode = viewMode;
+  const groups: [string, SearchResult[]][] = aggregateMode
+    ? filteredAggregatedResults
+    : searchResults.map(item => [
+        `${item.title}-${item.year}-${item.source_name}`,
+        [item],
+      ]);
 
-    const valueOf = (group: SearchResult[]) => {
-      switch (sortField) {
-        case 'sources':
-          return getSourcesCount(group);
-        case 'episodes':
-          return getEpisodesCount(group);
-        case 'year':
-        default:
-          return getYearValue(group);
-      }
-    };
+  const query = (searchParams.get('q') ?? '').trim().toLowerCase();
+  const isExact = (group: SearchResult[]) => group[0].title.toLowerCase().includes(query);
 
-    const compare = (a: [string, SearchResult[]], b: [string, SearchResult[]]) => {
-      const aVal = valueOf(a[1]);
-      const bVal = valueOf(b[1]);
+  const getYearValue = (group: SearchResult[]) => {
+    const y = group[0].year;
+    if (!y || y === 'unknown') return null;
+    const n = Number(y);
+    return Number.isNaN(n) ? null : n;
+  };
 
-      const aIsNull = aVal === null || aVal === undefined;
-      const bIsNull = bVal === null || bVal === undefined;
-      if (aIsNull && !bIsNull) return 1;
-      if (!aIsNull && bIsNull) return -1;
-      if (aIsNull && bIsNull) return 0;
-
-      if ((aVal as number) < (bVal as number)) return sortOrder === 'asc' ? -1 : 1;
-      if ((aVal as number) > (bVal as number)) return sortOrder === 'asc' ? 1 : -1;
-
-      return a[1][0].title.localeCompare(b[1][0].title);
-    };
-
-    const exact: [string, SearchResult[]][] = [];
-    const others: [string, SearchResult[]][] = [];
-    for (const item of filteredAggregatedResults) {
-      (isExact(item[1]) ? exact : others).push(item);
+  const getSourcesCount = (group: SearchResult[]) => group.length;
+  const getEpisodesCount = (group: SearchResult[]) => {
+    let maxEpisodes = 0;
+    for (const item of group) {
+      const count = Array.isArray(item.episodes) ? item.episodes.length : 0;
+      if (count > maxEpisodes) maxEpisodes = count;
     }
-    exact.sort(compare);
-    others.sort(compare);
-    return [...exact, ...others];
-  }, [filteredAggregatedResults, sortField, sortOrder, searchQuery]);
+    return maxEpisodes;
+  };
+
+  const valueOf = (group: SearchResult[]) => {
+    switch (sortField) {
+      case 'sources': return getSourcesCount(group);
+      case 'episodes': return getEpisodesCount(group);
+      case 'year':
+      default: return getYearValue(group);
+    }
+  };
+
+  const compare = (a: [string, SearchResult[]], b: [string, SearchResult[]]) => {
+    const aVal = valueOf(a[1]);
+    const bVal = valueOf(b[1]);
+    const aIsNull = aVal === null || aVal === undefined;
+    const bIsNull = bVal === null || bVal === undefined;
+    if (aIsNull && !bIsNull) return 1;
+    if (!aIsNull && bIsNull) return -1;
+    if (aIsNull && bIsNull) return 0;
+
+    if ((aVal as number) < (bVal as number)) return sortOrder === 'asc' ? -1 : 1;
+    if ((aVal as number) > (bVal as number)) return sortOrder === 'asc' ? 1 : -1;
+
+    return a[1][0].title.localeCompare(b[1][0].title);
+  };
+
+  const exact: [string, SearchResult[]][] = [];
+  const others: [string, SearchResult[]][] = [];
+  for (const item of groups) {
+    (isExact(item[1]) ? exact : others).push(item);
+  }
+  exact.sort(compare);
+  others.sort(compare);
+
+  return { exact, others };
+}, [filteredAggregatedResults, searchResults, sortField, sortOrder, searchQuery, viewMode]);
+
+
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -516,7 +525,7 @@ function SearchPageClient() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
             </div>
           ) : showResults ? (
-          <section className="mb-12">
+            <section className="mb-12">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">搜索结果</h2>
@@ -552,45 +561,43 @@ function SearchPageClient() {
                 </label>
               </div>
             </div>
-
-        {/* 筛选组件弹窗 */}
-        {showResults && searchResults.length > 0 && (
-          <div className="flex gap-3 flex-wrap mb-7 max-w-[100%] mx-auto">
-            <FilterOptions
-              openFilter={openFilter}
-              setOpenFilter={setOpenFilter}
-              // 来源
-              sourceOptions={sourceOptions}
-              filterSources={filterSources}
-              setFilterSources={setFilterSources}
-              // 标题
-              titleOptions={titleOptions}
-              selectedTitles={selectedTitles}
-              setSelectedTitles={setSelectedTitles}
-              // 年份
-              yearOptions={yearOptions}
-              selectedYears={selectedYears}
-              setSelectedYears={setSelectedYears}
-              // 排序
-              sortField={sortField}
-              onSortFieldChange={handleSortFieldChange}
-              sortOrder={sortOrder}
-              onSortOrderChange={setSortOrder}
-              sortOptions={[
-                { value: "sources", label: "按源数量" },
-                { value: "year", label: "按年份" },
-                { value: "episodes", label: "按集数" },
-              ]}
-            />
-          </div>
-        )}
-
+          
+            {/* 筛选组件弹窗 */}
+            {showResults && searchResults.length > 0 && (
+              <div className="flex gap-3 flex-wrap mb-7 max-w-[100%] mx-auto">
+                <FilterOptions
+                  openFilter={openFilter}
+                  setOpenFilter={setOpenFilter}
+                  sourceOptions={sourceOptions}
+                  filterSources={filterSources}
+                  setFilterSources={setFilterSources}
+                  titleOptions={titleOptions}
+                  selectedTitles={selectedTitles}
+                  setSelectedTitles={setSelectedTitles}
+                  yearOptions={yearOptions}
+                  selectedYears={selectedYears}
+                  setSelectedYears={setSelectedYears}
+                  sortField={sortField}
+                  onSortFieldChange={handleSortFieldChange}
+                  sortOrder={sortOrder}
+                  onSortOrderChange={setSortOrder}
+                  sortOptions={[
+                    { value: "sources", label: "按源数量" },
+                    { value: "year", label: "按年份" },
+                    { value: "episodes", label: "按集数" },
+                  ]}
+                />
+              </div>
+            )}
+          
+            {/* 精确匹配结果 */}
             <div
               key={`search-results-${viewMode}`}
               className="justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8"
             >
-              {viewMode
-                ? sortedAggregatedResults.map(([mapKey, group], index) => (
+              {sortedAggregatedResults.exact.map(([mapKey, group], index) => {
+                if (viewMode) {
+                  return (
                     <div key={`agg-${mapKey}-${index}`} className="w-full">
                       <VideoCard
                         from="search"
@@ -598,100 +605,78 @@ function SearchPageClient() {
                         query={searchQuery.trim() !== group[0].title ? searchQuery.trim() : ''}
                       />
                     </div>
-                  ))
-                : (() => {
-                    const filteredResults = searchResults.filter((item) => {
-                      // 来源筛选：如果没有选择任何来源（filterSources.length === 0），默认显示全部；如果选择了来源，只保留包含至少一个选中来源的影片
-                      const sourceMatch = filterSources.length === 0 ||
-                        filterSources.includes(item.source_name);
-                      const titleMatch = selectedTitles.length === 0 || selectedTitles.includes(item.title);
-                      const yearMatch = selectedYears.length === 0 || selectedYears.includes(item.year);
-                      return sourceMatch && titleMatch && yearMatch;
-                    });
-
-                    // 对非聚合结果进行排序
-                    return filteredResults
-                      .sort((a, b) => {
-                        const query = searchQuery.trim().toLowerCase();
-                        const aExactMatch = a.title.toLowerCase().includes(query);
-                        const bExactMatch = b.title.toLowerCase().includes(query);
-                        
-                        // 精确匹配的优先
-                        if (aExactMatch && !bExactMatch) return -1;
-                        if (!aExactMatch && bExactMatch) return 1;
-
-                        let aVal: number | string | null = null;
-                        let bVal: number | string | null = null;
-
-                        switch (sortField) {
-                          case 'sources':
-                            // 在非聚合模式下，源数量总是1，所以按源名称排序
-                            aVal = a.source_name;
-                            bVal = b.source_name;
-                            break;
-                          case 'episodes':
-                            aVal = a.episodes.length;
-                            bVal = b.episodes.length;
-                            break;
-                          case 'year':
-                          default:
-                            {
-                              const aYear = a.year;
-                              const bYear = b.year;
-                              if (aYear && aYear !== 'unknown') {
-                                const aNum = Number(aYear);
-                                aVal = Number.isNaN(aNum) ? aYear : aNum;
-                              }
-                              if (bYear && bYear !== 'unknown') {
-                                const bNum = Number(bYear);
-                                bVal = Number.isNaN(bNum) ? bYear : bNum;
-                              }
-                            }
-                            break;
-                        }
-
-                        const aIsNull = aVal === null || aVal === undefined;
-                        const bIsNull = bVal === null || bVal === undefined;
-                        if (aIsNull && !bIsNull) return 1;
-                        if (!aIsNull && bIsNull) return -1;
-                        if (aIsNull && bIsNull) return 0;
-
-                        if (typeof aVal === 'number' && typeof bVal === 'number') {
-                          if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                          if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                        } else {
-                          // 字符串比较
-                          const aStr = String(aVal);
-                          const bStr = String(bVal);
-                          if (aStr < bStr) return sortOrder === 'asc' ? -1 : 1;
-                          if (aStr > bStr) return sortOrder === 'asc' ? 1 : -1;
-                        }
-
-                        return a.title.localeCompare(b.title);
-                      })
-                      .map((item, index) => (
-                        <div key={`all-${item.source}-${item.id}-${index}`} className="w-full">
+                  );
+                } else {
+                  const item = group[0];
+                  return (
+                    <div key={`all-${mapKey}-${index}`} className="w-full">
+                      <VideoCard
+                        id={item.id}
+                        title={item.title || ''}
+                        poster={item.poster}
+                        episodes={item.episodes ? item.episodes.length : 0} // 转为 number
+                        source={item.source}
+                        source_name={item.source_name}
+                        douban_id={item.douban_id}
+                        query={searchQuery.trim() !== item.title ? searchQuery.trim() : ''}
+                        year={item.year}
+                        from="search"
+                        type={item.episodes && item.episodes.length > 1 ? 'tv' : 'movie'}
+                      />
+                    </div>
+                  );
+                }
+              })}
+          
+              {sortedAggregatedResults.exact.length === 0 && sortedAggregatedResults.others.length === 0 && (
+                <div className="col-span-full text-center text-gray-500 py-8 dark:text-gray-400">
+                  未找到相关结果
+                </div>
+              )}
+            </div>
+          
+            {/* 更多结果 */}
+            {sortedAggregatedResults.others.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-7">更多结果</h2>
+                <div className="justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8">
+                  {sortedAggregatedResults.others.map(([mapKey, group], index) => {
+                    if (viewMode) {
+                      return (
+                        <div key={`agg-others-${mapKey}-${index}`} className="w-full">
+                          <VideoCard
+                            from="search"
+                            items={group}
+                            query={searchQuery.trim() !== group[0].title ? searchQuery.trim() : ''}
+                          />
+                        </div>
+                      );
+                    } else {
+                      const item = group[0];
+                      return (
+                        <div key={`all-others-${mapKey}-${index}`} className="w-full">
                           <VideoCard
                             id={item.id}
-                            title={item.title}
+                            title={item.title || ''}
                             poster={item.poster}
-                            episodes={item.episodes.length}
+                            episodes={item.episodes ? item.episodes.length : 0} // 转为 number
                             source={item.source}
                             source_name={item.source_name}
                             douban_id={item.douban_id}
                             query={searchQuery.trim() !== item.title ? searchQuery.trim() : ''}
                             year={item.year}
                             from="search"
-                            type={item.episodes.length > 1 ? 'tv' : 'movie'}
+                            type={item.episodes && item.episodes.length > 1 ? 'tv' : 'movie'}
                           />
                         </div>
-                      ));
-                  })()}
-              {searchResults.length === 0 && (
-                <div className="col-span-full text-center text-gray-500 py-8 dark:text-gray-400">未找到相关结果</div>
-              )}
-            </div>
+                      );
+                    }
+                  })}
+                </div>
+              </div>
+            )}
           </section>
+          
 
           ) : searchHistory.length > 0 ? (
             <section className="mb-12">
