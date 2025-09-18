@@ -660,15 +660,6 @@ function PlayPageClient() {
         setSourceSearchLoading(false);
       }
     };
-
-    const CACHE_KEY_PREFIX = 'search_cache_';
-    const CACHE_TTL = 1000 * 60 * 180; // 缓存 180 分钟
-    
-    interface CachedResult {
-      timestamp: number;
-      reSearch: boolean;
-      results: SearchResult[];
-    }
     
     const fetchSourcesData = async (
       query: string,
@@ -676,139 +667,80 @@ function PlayPageClient() {
     ): Promise<SearchResult[]> => {
       setSourceSearchLoading(true);
       setSourceSearchError('');
-
-      // 清理过期缓存
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(CACHE_KEY_PREFIX)) {
-          const cachedItem = localStorage.getItem(key);
-          if (cachedItem) {
-            try {
-              const parsedItem = JSON.parse(cachedItem) as CachedResult;
-              if (Date.now() - parsedItem.timestamp >= CACHE_TTL) {
-                localStorage.removeItem(key); // 删除过期缓存
-              }
-            } catch (e) {
-              // 如果解析失败也删除
-              localStorage.removeItem(key);
-            }
-          }
-        }
-      }
     
-      // 生成更唯一的缓存键，避免影片名字相同时的缓存冲突
-      const cacheKey = `${CACHE_KEY_PREFIX}${query.trim().toLowerCase()}_${videoYearRef.current || ''}_${searchType || ''}`;
-      let aggregatedResults: SearchResult[] = [];
+      const aggregatedResults: SearchResult[] = [];
     
-      // 提前声明
-      let parsed: CachedResult | null = null;
-    
-      try {
-        // 1. 读取缓存
-        const cached = localStorage.getItem(cacheKey);
-    
-        if (cached) {
-          parsed = JSON.parse(cached) as CachedResult;
-          aggregatedResults = [...parsed.results];
-          setAvailableSources(aggregatedResults);
-          setSourceSearchLoading(false);
-          onResult?.(parsed.results);
-        }
-    
-        // 2. 发起流式搜索请求
-        if (!parsed || parsed.reSearch) {
-          const timeoutSeconds = getRequestTimeout();
-          const response = await fetch(
-            `/api/search?q=${encodeURIComponent(query.trim())}&timeout=${timeoutSeconds}`
-          );
-          if (!response.ok) throw new Error('搜索失败');
-    
-          const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
-            response.body?.getReader();
-          if (!reader) throw new Error('无法读取搜索流');
-    
-          const decoder = new TextDecoder();
-          let buffer = '';
-          let done = false;
-    
-          while (!done) {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-    
-            if (value) {
-              buffer += decoder.decode(value, { stream: true });
-              const lines: string[] = buffer.split('\n');
-              buffer = lines.pop() || '';
-    
-              for (const line of lines) {
-                if (!line.trim()) continue;
-    
-                try {
-                  const data = JSON.parse(line) as { pageResults?: SearchResult[] };
-                  if (data.pageResults) {
-                    const filteredResults: SearchResult[] = data.pageResults.filter(
-                      (r: SearchResult) => {
-                        const titleMatch =
-                          r.title.trim().replace(/\s+/g, ' ').toLowerCase() ===
-                          videoTitleRef.current.trim().replace(/\s+/g, ' ').toLowerCase();
-                        const yearMatch = videoYearRef.current
-                          ? r.year.toLowerCase() ===
-                            videoYearRef.current.toLowerCase()
-                          : true;
-                        const typeMatch = searchType
-                          ? (searchType === 'tv' && r.episodes.length > 1) ||
-                            (searchType === 'movie' && r.episodes.length === 1)
-                          : true;
-                        return titleMatch && yearMatch && typeMatch;
-                      }
+      try {    
+        // 发起流式搜索请求
+        const timeoutSeconds = getRequestTimeout();
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(query.trim())}&timeout=${timeoutSeconds}`
+        );
+        if (!response.ok) throw new Error('搜索失败');
+  
+        const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
+          response.body?.getReader();
+        if (!reader) throw new Error('无法读取搜索流');
+  
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let done = false;
+  
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+  
+          if (value) {
+            buffer += decoder.decode(value, { stream: true });
+            const lines: string[] = buffer.split('\n');
+            buffer = lines.pop() || '';
+  
+            for (const line of lines) {
+              if (!line.trim()) continue;
+  
+              try {
+                const data = JSON.parse(line) as { pageResults?: SearchResult[] };
+                if (data.pageResults) {
+                  const filteredResults: SearchResult[] = data.pageResults.filter(
+                    (r: SearchResult) => {
+                      const titleMatch =
+                        r.title.trim().replace(/\s+/g, ' ').toLowerCase() ===
+                        videoTitleRef.current.trim().replace(/\s+/g, ' ').toLowerCase();
+                      const yearMatch = videoYearRef.current
+                        ? r.year.toLowerCase() ===
+                          videoYearRef.current.toLowerCase()
+                        : true;
+                      const typeMatch = searchType
+                        ? (searchType === 'tv' && r.episodes.length > 1) ||
+                          (searchType === 'movie' && r.episodes.length === 1)
+                        : true;
+                      return titleMatch && yearMatch && typeMatch;
+                    }
+                  );
+  
+                  if (filteredResults.length > 0) {
+                    const newOnes = filteredResults.filter(
+                      (r) =>
+                        !aggregatedResults.some(
+                          (item) => item.source === r.source && item.id === r.id
+                        )
                     );
-    
-                    if (filteredResults.length > 0) {
-                      const newOnes = filteredResults.filter(
-                        (r) =>
-                          !aggregatedResults.some(
-                            (item) => item.source === r.source && item.id === r.id
-                          )
-                      );
-    
-                      if (newOnes.length > 0) {
-                        aggregatedResults.push(...newOnes);
-                        setAvailableSources([...aggregatedResults]);
-                        setSourceSearchLoading(false);
-                        onResult?.(newOnes);
-    
-                        // 每次新增就更新缓存
-                        parsed = {
-                          timestamp: Date.now(),
-                          reSearch: true,
-                          results: aggregatedResults,
-                        };
-                        localStorage.setItem(cacheKey, JSON.stringify(parsed));
-                      }
+  
+                    if (newOnes.length > 0) {
+                      aggregatedResults.push(...newOnes);
+                      setAvailableSources([...aggregatedResults]);
+                      setSourceSearchLoading(false);
+                      onResult?.(newOnes);
                     }
                   }
-                } catch (err) {
-                  console.warn('解析行 JSON 失败:', err);
                 }
+              } catch (err) {
+                console.warn('解析行 JSON 失败:', err);
               }
             }
           }
-        } else {
-          setSourceSearchLoading(false);
-          return aggregatedResults;
         }
-    
         setSourceSearchLoading(false);
-    
-        // 最终缓存结果 - 只有当有结果时才缓存
-        if (aggregatedResults.length > 0) {
-          parsed = {
-            timestamp: Date.now(),
-            reSearch: false,
-            results: aggregatedResults,
-          };
-          localStorage.setItem(cacheKey, JSON.stringify(parsed));
-        }
     
         return aggregatedResults;
       } catch (err) {
