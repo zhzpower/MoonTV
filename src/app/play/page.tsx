@@ -818,7 +818,35 @@ function PlayPageClient() {
       }
     };
     
+    /**
+      * 初始化播放数据
+      */
+    function initDetail(detailData: SearchResult) {
+      setCurrentSource(detailData.source);
+      setCurrentId(detailData.id);
+      setVideoYear(detailData.year);
+      setVideoTitle(detailData.title || videoTitleRef.current);
+      setVideoCover(detailData.poster);
+      setVideoDoubanId(detailData.douban_id || 0);
+      setDetail(detailData);
     
+      if (currentEpisodeIndex >= detailData.episodes.length) {
+        setCurrentEpisodeIndex(0);
+      }
+    
+      // 规范 URL 参数
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('source', detailData.source);
+      newUrl.searchParams.set('id', detailData.id);
+      newUrl.searchParams.set('year', detailData.year);
+      newUrl.searchParams.set('title', detailData.title);
+      newUrl.searchParams.delete('prefer');
+      window.history.replaceState({}, '', newUrl.toString());
+    
+      setLoadingStage('ready');
+      setLoadingMessage('✨ 准备就绪，即将开始播放...');
+      setTimeout(() => setLoading(false), 500);
+    }
 
     const initAll = async () => {
       if (!currentSource && !currentId && !videoTitle && !searchTitle) {
@@ -834,63 +862,36 @@ function PlayPageClient() {
           ? '🎬 正在获取视频详情...'
           : '🔍 正在搜索播放源...'
       );
-    
-      let started = false; // 是否已经开始播放
-    
-      const results = await fetchSourcesData(videoTitle, (newResults) => {
-        if (!started && newResults.length > 0) {
-          started = true;
-
-          let detailData = null;
-          // 从缓存中读取当前源和 ID
-          const cachedSource = localStorage.getItem('currentSource');
-          const cachedId = localStorage.getItem('currentId');
-
-          // 如果缓存存在，就优先找这个源
-          if (cachedSource && cachedId) {
-            detailData = newResults.find(
-              (item) => item.source === cachedSource && item.id === cachedId
-            ) || null;
+      let detailData: SearchResult | null = null;
+      let allResults: SearchResult[] = [];
+      
+      await fetchSourcesData(videoTitle, (newResults) => {
+        allResults = [...allResults, ...newResults];
+      
+        // 如果还没确定 detailData，就尝试找目标源
+        if (!detailData && currentSource && currentId) {
+          const match = newResults.find(
+            (item) => item.source === currentSource && item.id === currentId
+          );
+          if (match) {
+            detailData = match;
+            initDetail(detailData);
           }
-
-          // 如果没找到，就退回到第一个源
-          if (!detailData) {
-            detailData = newResults[0];
-          }
-    
-          setCurrentSource(detailData.source);
-          setCurrentId(detailData.id);
-          setVideoYear(detailData.year);
-          setVideoTitle(detailData.title || videoTitleRef.current);
-          setVideoCover(detailData.poster);
-          setVideoDoubanId(detailData.douban_id || 0);
-          setDetail(detailData);
-    
-          if (currentEpisodeIndex >= detailData.episodes.length) {
-            setCurrentEpisodeIndex(0);
-          }
-    
-          // 规范URL参数
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set('source', detailData.source);
-          newUrl.searchParams.set('id', detailData.id);
-          newUrl.searchParams.set('year', detailData.year);
-          newUrl.searchParams.set('title', detailData.title);
-          newUrl.searchParams.delete('prefer');
-          window.history.replaceState({}, '', newUrl.toString());
-    
-          setLoadingStage('ready');
-          setLoadingMessage('✨ 准备就绪，即将开始播放...');
-          setTimeout(() => setLoading(false), 500);
         }
       });
-
-      // 如果没有找到匹配结果，设置错误状态
-      if (!started && results.length === 0) {
+      
+      // 流式搜索结束：如果目标源没找到，就 fallback
+      if (!detailData && allResults.length > 0) {
+        detailData = allResults[0];
+        initDetail(detailData);
+      }
+      
+      // 完全没结果
+      if (!detailData) {
         setError('未找到匹配结果');
         setLoading(false);
       }
-    };    
+    }
     
     initAll();
     
@@ -953,9 +954,6 @@ function PlayPageClient() {
     newTitle: string
   ) => {
     try {
-      // 保存当前源和 ID 到缓存
-      localStorage.setItem('currentSource', newSource);
-      localStorage.setItem('currentId', newId);
       // 显示换源加载状态
       setVideoLoadingStage('sourceChanging');
       setIsVideoLoading(true);
