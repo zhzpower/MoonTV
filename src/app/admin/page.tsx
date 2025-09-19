@@ -1168,15 +1168,15 @@ const CategoryConfig = ({
             </span>
           )}
         </h4>
-        <button
-          disabled
-          className='px-3 py-1 text-sm rounded-lg transition-colors bg-gray-400 cursor-not-allowed text-white'
-        >
-          {showAddForm ? '取消' : '添加分类'}
-        </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className='px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors'
+            >
+              {showAddForm ? '取消' : '添加分类'}
+            </button>
       </div>
 
-      {false && showAddForm && (
+          {showAddForm && (
         <div className='p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 space-y-4'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
             <input

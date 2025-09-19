@@ -543,47 +543,6 @@ export class D1Storage implements IStorage {
         config.SiteConfig.DisableYellowFilter ? 1 : 0
       )
       .run();
-
-    // 清空并重新插入源配置
-    await this.db.prepare('DELETE FROM source_configs').run();
-    for (const source of config.SourceConfig) {
-      await this.db
-        .prepare(
-          `
-          INSERT INTO source_configs (config_key, name, api, detail, source_from, disabled)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `
-        )
-        .bind(
-          source.key,
-          source.name,
-          source.api,
-          source.detail,
-          source.from,
-          source.disabled ? 1 : 0
-        )
-        .run();
-    }
-
-    // 清空并重新插入自定义分类
-    await this.db.prepare('DELETE FROM custom_categories').run();
-    for (const category of config.CustomCategories) {
-      await this.db
-        .prepare(
-          `
-          INSERT INTO custom_categories (name, category_type, query, category_from, disabled)
-          VALUES (?, ?, ?, ?, ?)
-        `
-        )
-        .bind(
-          category.name,
-          category.type,
-          category.query,
-          category.from,
-          category.disabled ? 1 : 0
-        )
-        .run();
-    }
   }
 
   // ---------- 跳过片头片尾配置 ----------

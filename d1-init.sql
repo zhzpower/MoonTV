@@ -94,29 +94,6 @@ CREATE TABLE IF NOT EXISTS admin_config (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建源配置表
-CREATE TABLE IF NOT EXISTS source_configs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  config_key TEXT NOT NULL,
-  name TEXT NOT NULL,
-  api TEXT NOT NULL,
-  detail TEXT,
-  source_from TEXT DEFAULT 'config',
-  disabled BOOLEAN DEFAULT false,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- 创建自定义分类表
-CREATE TABLE IF NOT EXISTS custom_categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT,
-  category_type TEXT NOT NULL,
-  query TEXT NOT NULL,
-  category_from TEXT DEFAULT 'config',
-  disabled BOOLEAN DEFAULT false,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
 -- 输出成功信息
 SELECT '✅ D1 数据库表结构创建完成' as status;
 
