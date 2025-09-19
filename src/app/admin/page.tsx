@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  Bell,
   Check,
   ChevronDown,
   ChevronUp,
@@ -2043,6 +2044,22 @@ function AdminPageClient() {
             <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
               管理员设置
             </h1>
+            {/* 缓存提示按钮 */}
+            <button
+              onClick={() => {
+                Swal.fire({
+                  title: '提示',
+                  text: '视频源配置和分类配置中的修改需要清理浏览缓存才会彻底生效，否者需等待站点配置中的接口缓存时间后才生效',
+                  icon: 'info',
+                  confirmButtonText: '我知道了',
+                  confirmButtonColor: '#3b82f6',
+                });
+              }}
+              className="w-8 h-8 p-1.5 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200/50 dark:text-gray-300 dark:hover:bg-gray-700/50 transition-colors"
+              aria-label="缓存提示"
+            >
+              <Bell className="w-full h-full" />
+            </button>
             {config && role === 'owner' && (
               <button
                 onClick={handleResetConfig}
