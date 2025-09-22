@@ -317,8 +317,6 @@ MoonTV 支持标准的苹果 CMS V10 API 格式。
 
 该项目已兼容 [Selene](https://github.com/MoonTechLab/Selene) 在移动端上使用，可以直接作为 Selene 后端
 
-暂时收藏夹与播放记录和网页端隔离，后续会支持同步用户数据
-
 ## Roadmap
 
 - [x] 深色模式
