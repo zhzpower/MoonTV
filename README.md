@@ -189,7 +189,7 @@ docker run -d --name moontv -p 3000:3000 --env PASSWORD=your_password stardm/sta
 ```yaml
 services:
   startv-core:
-    image: stardm/startv:latest
+    image: ghcr.io/stardm0/moontv:latest
     container_name: startv-core
     restart: on-failure
     ports:
@@ -203,7 +203,7 @@ services:
 ```yaml
 services:
   startv-core:
-    image: stardm/startv:latest
+    image: ghcr.io/stardm0/moontv:latest
     container_name: startv-core
     restart: on-failure
     ports:
