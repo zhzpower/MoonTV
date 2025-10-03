@@ -18,6 +18,10 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
+      - name: 转换为小写
+        run: |
+          echo "IMAGE_NAME_LOWER=$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -33,7 +37,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}
           tags: |
             type=raw,value=latest
 
