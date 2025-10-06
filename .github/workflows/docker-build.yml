@@ -2,6 +2,12 @@ name: Docker Build and Push
 
 on:
   workflow_dispatch:
+    inputs:
+      version_tag:
+        description: '版本标签 (例如: v1.0.0)'
+        required: false
+        type: string
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -28,14 +34,40 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 提取 Docker 元数据
-        id: meta
+      - name: 设置版本标签
+        id: version
+        run: |
+          if [ -n "${{ inputs.version_tag }}" ]; then
+            echo "version=${{ inputs.version_tag }}" >> $GITHUB_OUTPUT
+            echo "has_custom_version=true" >> $GITHUB_OUTPUT
+          else
+            echo "version=" >> $GITHUB_OUTPUT
+            echo "has_custom_version=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 提取 Docker 元数据 (手动版本)
+        if: steps.version.outputs.has_custom_version == 'true'
+        id: meta-custom
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+          flavor: |
+            latest=false
+
+      - name: 提取 Docker 元数据 (自动版本)
+        if: steps.version.outputs.has_custom_version == 'false'
+        id: meta-auto
         uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
+          flavor: |
+            latest=false
 
       - name: 构建并推送 Docker 镜像
         uses: docker/build-push-action@v5
@@ -43,8 +75,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-custom.outputs.tags || steps.meta-auto.outputs.tags }}
+          labels: ${{ steps.meta-custom.outputs.labels || steps.meta-auto.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -54,6 +86,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**镜像标签：**" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta-custom.outputs.tags || steps.meta-auto.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.version.outputs.has_custom_version }}" == "true" ]; then
+            echo "**手动版本标签：** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
