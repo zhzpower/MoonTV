@@ -2204,7 +2204,7 @@ function AdminPageClient() {
               onClick={() => {
                 Swal.fire({
                   title: '提示',
-                  text: '视频源配置和分类配置中的修改需要清理浏览缓存才会彻底生效，否者需等待站点配置中的接口缓存时间后才生效',
+                  text: '视频源配置和分类配置中的修改需要清理浏览缓存才会彻底生效，否则需等待站点配置中的接口缓存时间后才生效',
                   icon: 'info',
                   confirmButtonText: '我知道了',
                   confirmButtonColor: '#3b82f6',
