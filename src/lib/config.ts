@@ -323,8 +323,8 @@ async function initConfig() {
             DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
             DisableYellowFilter:
           process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
-        TVBoxEnabled: process.env.TVBOX_ENABLED == null ? true : process.env.TVBOX_ENABLED === 'true',
-        TVBoxPassword: process.env.PASSWORD || '',
+        TVBoxEnabled: false,
+        TVBoxPassword: '',
           },
           UserConfig: {
             AllowRegister: process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true',
@@ -376,8 +376,8 @@ async function initConfig() {
         DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
         DisableYellowFilter:
           process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
-        TVBoxEnabled: process.env.TVBOX_ENABLED == null ? true : process.env.TVBOX_ENABLED === 'true',
-        TVBoxPassword: process.env.PASSWORD || '',
+        TVBoxEnabled: false,
+        TVBoxPassword: '',
       },
       UserConfig: {
         AllowRegister: process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true',
@@ -643,8 +643,8 @@ export async function resetConfig() {
       DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
       DisableYellowFilter:
         process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
-      TVBoxEnabled: process.env.TVBOX_ENABLED == null ? true : process.env.TVBOX_ENABLED === 'true',
-      TVBoxPassword: process.env.PASSWORD || '',
+        TVBoxEnabled: false,
+        TVBoxPassword: '',
     },
     UserConfig: {
       AllowRegister: process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true',
