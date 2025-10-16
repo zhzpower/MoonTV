@@ -1399,9 +1399,9 @@ const VideoSourceConfig = ({
 
       {/* 批量操作工具栏 */}
       {sources.length > 0 && (
-        <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-4'>
+        <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 mb-4'>
+          <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between'>
+            <div className='flex items-center gap-2'>
               <label className='flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300'>
                 <input
                   type='checkbox'
@@ -1411,15 +1411,6 @@ const VideoSourceConfig = ({
                 />
                 全选 ({selectedSources.size}/{sources.length})
               </label>
-              {selectedSources.size > 0 ? (
-                <span className='text-xs text-blue-600 dark:text-blue-400 font-medium'>
-                  已选择 {selectedSources.size} 个视频源
-                </span>
-              ) : (
-                <span className='text-xs text-gray-500 dark:text-gray-400'>
-                  请选择要操作的视频源
-                </span>
-              )}
             </div>
             <div className='flex items-center gap-2'>
               <button
