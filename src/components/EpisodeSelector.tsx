@@ -452,7 +452,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
 
           {/* 集数网格 */}
           <div className='overflow-y-auto flex-1 pb-4 scrollbar-hide'>
-            <div className='grid grid-cols-3 sm:grid-cols-4 gap-1.5'>
+            <div className='grid grid-cols-3 sm:grid-cols-4 gap-3'>
               {(() => {
                 const len = currentEnd - currentStart + 1;
                 const episodes = Array.from({ length: len }, (_, i) =>
