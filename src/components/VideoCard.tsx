@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { ExternalLink, Heart, PlayCircleIcon, Trash2 } from 'lucide-react';
+import { ExternalLink, Heart, Link, PlayCircleIcon, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -554,7 +554,7 @@ export default function VideoCard({
               }
             },
           },
-          ...(from !== 'douban' && actualSource && actualId
+          ...(from !== 'douban' && from !== 'search' && actualSource && actualId
             ? [
                 favorited
                   ? {
@@ -589,7 +589,7 @@ export default function VideoCard({
                 {
                   id: 'open-link',
                   label: isBangumi ? '打开 Bangumi 页面' : '打开豆瓣页面',
-                  icon: <ExternalLink size={18} />,
+                  icon: <Link size={18} />,
                   onClick: () => {
                     if (isBangumi) {
                       window.open(`https://bangumi.tv/subject/${actualDoubanId}`, '_blank');
