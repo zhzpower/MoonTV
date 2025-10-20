@@ -554,7 +554,7 @@ export default function VideoCard({
               }
             },
           },
-          ...(from !== 'douban' && from !== 'search' && actualSource && actualId
+          ...(from !== 'douban' && !(from === 'search' && isAggregate) && actualSource && actualId
             ? [
                 favorited
                   ? {
