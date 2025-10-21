@@ -571,4 +571,15 @@ export class D1Storage implements IStorage {
 
     return configs;
   }
+
+  // 清空所有数据
+  async clearAllData(): Promise<void> {
+    // 删除所有表的数据
+    await this.db.prepare('DELETE FROM play_records').run();
+    await this.db.prepare('DELETE FROM favorites').run();
+    await this.db.prepare('DELETE FROM search_history').run();
+    await this.db.prepare('DELETE FROM skip_configs').run();
+    await this.db.prepare('DELETE FROM users').run();
+    await this.db.prepare('DELETE FROM admin_config').run();
+  }
 }
