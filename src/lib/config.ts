@@ -330,6 +330,9 @@ async function initConfig() {
             DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
             DisableYellowFilter:
           process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
+            DanmakuApiBaseUrl:
+              process.env.NEXT_PUBLIC_DANMU_API_BASE_URL ||
+              '',
         TVBoxEnabled: false,
         TVBoxPassword: '',
           },
@@ -353,6 +356,7 @@ async function initConfig() {
             from: 'config',
             disabled: false,
           })),
+          SubscriptionConfig: {},
         };
       }
   
@@ -378,12 +382,17 @@ async function initConfig() {
         SearchDownstreamMaxPage:
           Number(process.env.NEXT_PUBLIC_SEARCH_MAX_PAGE) || 5,
         SiteInterfaceCacheTime: fileConfig.cache_time || 7200,
-        DoubanProxyType: process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct',
+        DoubanProxyType:
+          process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct',
         DoubanProxy: process.env.NEXT_PUBLIC_DOUBAN_PROXY || '',
-        DoubanImageProxyType: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct',
+        DoubanImageProxyType:
+          process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct',
         DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
         DisableYellowFilter:
           process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
+        DanmakuApiBaseUrl:
+          process.env.NEXT_PUBLIC_DANMU_API_BASE_URL ||
+          '',
         TVBoxEnabled: false,
         TVBoxPassword: '',
       },
@@ -408,18 +417,19 @@ async function initConfig() {
           from: 'config',
           disabled: false,
         })) || [],
+      SubscriptionConfig: {},
     } as AdminConfig;
   }
 }
 
 export async function getConfig(): Promise<AdminConfig> {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
-  if (process.env.DOCKER_ENV === 'true' || storageType === 'localstorage') {
+  if (storageType === 'localstorage') {
     await initConfig();
     return cachedConfig;
   }
 
-  // 非 docker 环境且 DB 存储，直接读 db 配置
+  // 非本地存储，直接读 db 配置
   const storage = getStorage();
   let adminConfig: AdminConfig | null = null;
   if (storage && typeof (storage as any).getAdminConfig === 'function') {
@@ -455,6 +465,12 @@ export async function getConfig(): Promise<AdminConfig> {
       typeof adminConfig.SiteConfig.DisableYellowFilter === 'boolean'
         ? adminConfig.SiteConfig.DisableYellowFilter
         : process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
+
+    // 弹幕接口配置：数据库优先，其次环境变量，最后使用默认值
+    adminConfig.SiteConfig.DanmakuApiBaseUrl =
+      adminConfig.SiteConfig.DanmakuApiBaseUrl ||
+      process.env.NEXT_PUBLIC_DANMU_API_BASE_URL ||
+      '';
     // TVBox 开关与密码默认值
     const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
     if (storageType === 'localstorage') {
@@ -614,6 +630,9 @@ export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
   if (!adminConfig.CustomCategories || !Array.isArray(adminConfig.CustomCategories)) {
     adminConfig.CustomCategories = [];
   }
+  if (!adminConfig.SubscriptionConfig) {
+    adminConfig.SubscriptionConfig = {};
+  }
 
   // 站长变更自检
   const ownerUser = process.env.USERNAME;
@@ -720,10 +739,14 @@ export async function resetConfig() {
       SiteInterfaceCacheTime: fileConfig.cache_time || 7200,
       DoubanProxyType: process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct',
       DoubanProxy: process.env.NEXT_PUBLIC_DOUBAN_PROXY || '',
-      DoubanImageProxyType: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct',
+      DoubanImageProxyType:
+        process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct',
       DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
       DisableYellowFilter:
         process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
+        DanmakuApiBaseUrl:
+          process.env.NEXT_PUBLIC_DANMU_API_BASE_URL ||
+          '',
         TVBoxEnabled: false,
         TVBoxPassword: '',
     },
@@ -749,6 +772,7 @@ export async function resetConfig() {
             disabled: false,
           })) || []
         : [],
+    SubscriptionConfig: {},
   } as AdminConfig;
 
   if (storage && typeof (storage as any).setAdminConfig === 'function') {
@@ -763,6 +787,7 @@ export async function resetConfig() {
   cachedConfig.UserConfig = adminConfig.UserConfig;
   cachedConfig.SourceConfig = adminConfig.SourceConfig;
   cachedConfig.CustomCategories = adminConfig.CustomCategories || [];
+  cachedConfig.SubscriptionConfig = adminConfig.SubscriptionConfig;
 }
 
 export async function getCacheTime(): Promise<number> {
